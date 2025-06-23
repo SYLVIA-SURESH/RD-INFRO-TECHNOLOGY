@@ -1,0 +1,27 @@
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import LabelEncoder
+url = 'https://raw.githubusercontent.com/IBM/telco-customer-churn-on-icp4d/master/data/Telco-Customer-Churn.csv'
+df = pd.read_csv(url)
+df.drop('customerID', axis=1, inplace=True)
+df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+df = df.dropna()
+le_contract = LabelEncoder()
+df['Contract_encoded'] = le_contract.fit_transform(df['Contract'])
+le_churn = LabelEncoder()
+df['Churn_encoded'] = le_churn.fit_transform(df['Churn'])
+def segment_customer(row):
+    tenure = 'New' if row['tenure'] < 12 else 'Mid' if row['tenure'] < 48 else 'Loyal'
+    charges = 'Low' if row['MonthlyCharges'] < 50 else 'Medium' if row['MonthlyCharges'] < 90 else 'High'
+    return f"{tenure}-{charges}-{row['Contract']}"
+df['Segment'] = df.apply(segment_customer, axis=1)
+segment_churn = df.groupby('Segment')['Churn_encoded'].mean().sort_values(ascending=False)
+print("\nChurn rate by customer segment:")
+print(segment_churn)
+plt.figure(figsize=(12, 6))
+sns.barplot(x=segment_churn.index, y=segment_churn.values, palette='coolwarm')
+plt.xticks(rotation=90)
+plt.ylabel('Churn Rate')
+plt.title('Churn Rate by Customer Segment')
+plt.show()
